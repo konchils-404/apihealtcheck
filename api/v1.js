@@ -91,19 +91,22 @@ function checkProxy(ip, port) {
 }
 
 function getCountryName(code) {
-  const names = {
-    ID: 'Indonesia',
-    US: 'United States',
-    SG: 'Singapore'
-  };
-  return names[code] || 'Unknown';
+  try {
+    if (!code) return 'Unknown';
+    const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+    return regionNames.of(code.toUpperCase()) || 'Unknown';
+  } catch {
+    return 'Unknown';
+  }
 }
 
 function getCountryFlag(code) {
-  const flags = {
-    ID: '🇮🇩',
-    US: '🇺🇸',
-    SG: '🇸🇬'
-  };
-  return flags[code] || '';
+  try {
+    if (!code) return '';
+    return code.toUpperCase().replace(/./g, char =>
+      String.fromCodePoint(127397 + char.charCodeAt())
+    );
+  } catch {
+    return '';
+  }
 }
