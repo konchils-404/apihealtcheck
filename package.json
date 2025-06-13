@@ -1,0 +1,5 @@
+{
+  "name": "proxycheck-api",
+  "version": "1.0.0",
+  "main": "api/v1.js"
+}
