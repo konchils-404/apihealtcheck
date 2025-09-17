@@ -1,5 +1,5 @@
 {
   "name": "proxycheck-api",
   "version": "1.0.0",
-  "main": "check.js"
+  "main": "/check.js"
 }
