@@ -30,8 +30,9 @@ function checkProxy(ip, port) {
   const host = 'speed.cloudflare.com';
   const path = '/meta';
   const payload = `GET ${path} HTTP/1.1\r\nHost: ${host}\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r\n`;
+  const timeoutMs = 5000; // 8 detik
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const start = Date.now();
 
     const socket = net.connect({ host: ip, port: parseInt(port) }, () => {
@@ -55,17 +56,15 @@ function checkProxy(ip, port) {
       secureSocket.on('end', () => {
         const parts = data.split('\r\n\r\n');
         try {
-          const json = JSON.parse(parts[1]);
+          const body = parts.slice(1).join('\r\n\r\n').trim();
+          const json = JSON.parse(body);
           const end = Date.now();
           const response_time = end - start;
 
           if (json.clientIp) {
             resolve({
               success: true,
-              proxy: {
-                ip,
-                port: String(port),
-              },
+              proxy: { ip, port: String(port) },
               is_proxy: true,
               response_time,
               data: {
@@ -75,7 +74,8 @@ function checkProxy(ip, port) {
                 asn: parseInt(json.asn) || 0,
                 asOrganization: json.asOrganization || 'Unknown',
                 colo: json.colo || 'Unknown',
-                country: json.country || 'Unknown',
+                country: getCountryName(json.country),
+                flag: getCountryFlag(json.country),
                 city: json.city || 'Unknown',
                 region: json.region || 'Unknown',
                 postalCode: json.postalCode || 'Unknown',
@@ -85,20 +85,51 @@ function checkProxy(ip, port) {
               },
             });
           } else {
-            reject(new Error('Invalid JSON response'));
+            resolve({
+              success: false,
+              message: 'Error: Invalid JSON response',
+              proxy: { ip, port: String(port) },
+              is_proxy: false,
+            });
           }
         } catch (e) {
-          reject(new Error('Failed to parse JSON from proxy'));
+          resolve({
+            success: false,
+            message: 'Error: Failed to parse JSON',
+            proxy: { ip, port: String(port) },
+            is_proxy: false,
+          });
         }
       });
 
       secureSocket.on('error', (err) => {
-        reject(new Error('TLS socket error: ' + err.message));
+        resolve({
+          success: false,
+          message: 'Error: TLS socket error - ' + err.message,
+          proxy: { ip, port: String(port) },
+          is_proxy: false,
+        });
+      });
+    });
+
+    // timeout
+    socket.setTimeout(timeoutMs, () => {
+      socket.destroy();
+      resolve({
+        success: false,
+        message: 'Error: Connection timed out',
+        proxy: { ip, port: String(port) },
+        is_proxy: false,
       });
     });
 
     socket.on('error', (err) => {
-      reject(new Error('TCP socket error: ' + err.message));
+      resolve({
+        success: false,
+        message: 'Error: TCP socket error - ' + err.message,
+        proxy: { ip, port: String(port) },
+        is_proxy: false,
+      });
     });
   });
 }
