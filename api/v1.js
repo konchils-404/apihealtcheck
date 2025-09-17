@@ -35,17 +35,20 @@ function checkProxy(ip, port) {
     const start = Date.now();
 
     const socket = net.connect({ host: ip, port: parseInt(port) }, () => {
-      const secureSocket = tls.connect({
-        socket,
-        servername: host,
-        rejectUnauthorized: false
-      }, () => {
-        secureSocket.write(payload);
-      });
+      const secureSocket = tls.connect(
+        {
+          socket,
+          servername: host,
+          rejectUnauthorized: false,
+        },
+        () => {
+          secureSocket.write(payload);
+        }
+      );
 
       let data = '';
 
-      secureSocket.on('data', chunk => {
+      secureSocket.on('data', (chunk) => {
         data += chunk.toString();
       });
 
@@ -54,22 +57,32 @@ function checkProxy(ip, port) {
         try {
           const json = JSON.parse(parts[1]);
           const end = Date.now();
+          const response_time = end - start;
+
           if (json.clientIp) {
             resolve({
-              ip,
-              port: parseInt(port),
-              proxyip: true,
-              asOrganization: json.asOrganization || 'Unknown',
-              countryCode: json.country || 'Unknown',
-              countryName: getCountryName(json.country),
-              countryFlag: getCountryFlag(json.country),
-              asn: parseInt(json.asn) || 0,
-              colo: json.colo || 'Unknown',
-              httpProtocol: json.httpProtocol || 'Unknown',
-              delay: `${end - start} ms`,
-              latitude: json.latitude || 'Unknown',
-              longitude: json.longitude || 'Unknown',
-              message: `Cloudflare Proxy Alive ${ip}:${port}`
+              success: true,
+              proxy: {
+                ip,
+                port: String(port),
+              },
+              is_proxy: true,
+              response_time,
+              data: {
+                hostname: host,
+                clientIp: json.clientIp,
+                httpProtocol: json.httpProtocol || 'Unknown',
+                asn: parseInt(json.asn) || 0,
+                asOrganization: json.asOrganization || 'Unknown',
+                colo: json.colo || 'Unknown',
+                country: json.country || 'Unknown',
+                city: json.city || 'Unknown',
+                region: json.region || 'Unknown',
+                postalCode: json.postalCode || 'Unknown',
+                latitude: json.latitude || 'Unknown',
+                longitude: json.longitude || 'Unknown',
+                ip: json.clientIp,
+              },
             });
           } else {
             reject(new Error('Invalid JSON response'));
@@ -79,12 +92,12 @@ function checkProxy(ip, port) {
         }
       });
 
-      secureSocket.on('error', err => {
+      secureSocket.on('error', (err) => {
         reject(new Error('TLS socket error: ' + err.message));
       });
     });
 
-    socket.on('error', err => {
+    socket.on('error', (err) => {
       reject(new Error('TCP socket error: ' + err.message));
     });
   });
