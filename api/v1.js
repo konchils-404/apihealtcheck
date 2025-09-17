@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
     const result = await checkProxy(ip, port);
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify(result));
+    res.end(JSON.stringify(result, null, 2));
   } catch (error) {
     res.statusCode = 500;
     res.setHeader('Content-Type', 'application/json');
